@@ -42,10 +42,15 @@ class DMEM(object):
             print(self.name, "- ERROR: Couldn't open input file in path:", self.ipfilepath)
 
     def Read(self, idx): # Use this to read from DMEM.
-        pass # Replace this line with your code here.
+        if idx < self.size:
+            return self.data[idx]
+        return False    # In case we need to check "Read" results
 
     def Write(self, idx, val): # Use this to write into DMEM.
-        pass # Replace this line with your code here.
+        if idx < self.size:
+            self.data[idx] = val
+            return True
+        return False
 
     def dump(self):
         try:
@@ -67,10 +72,16 @@ class RegisterFile(object):
         self.registers  = [[0x0 for e in range(self.vec_length)] for r in range(self.reg_count)] # list of lists of integers
 
     def Read(self, idx):
-        pass # Replace this line with your code.
-
+        if idx < self.reg_count:
+            return self.registers[idx]
+        return False
+    # Read returns entire register
+    # Write takes  entire register
     def Write(self, idx, val):
-        pass # Replace this line with your code.
+        if idx < self.reg_count:
+            self.registers[idx] = val
+            return True
+        return False
 
     def dump(self, iodir):
         opfilepath = os.path.abspath(os.path.join(iodir, self.name + ".txt"))
@@ -85,7 +96,7 @@ class RegisterFile(object):
             print(self.name, "- ERROR: Couldn't open output file in path:", opfilepath)
 
 class Core():
-    def __init__(self, imem, sdmem, vdmem):
+    def __init__(self, imem: IMEM, sdmem: DMEM, vdmem: DMEM):
         self.IMEM = imem
         self.SDMEM = sdmem
         self.VDMEM = vdmem
@@ -96,12 +107,133 @@ class Core():
         # Your code here.
         
     def run(self):
+        # Initialization
+        instr_idx = 0 
+        # Execution
         while(True):
-            break # Replace this line with your code.
+            instr_idx += 1
+            instr = self.fetch(instr_idx)
+            
+            instr = self.decode(instr)
+
+            instr = self.execute(instr)
+
+    def fetch(self, idx):
+        '''
+        Fetch instr at idx
+        '''
+        return self.IMEM.Read(idx)
+    
+    def decode(self, instr):
+        '''
+        Take instr in string format
+        Return as: [instr, ...operands]
+        '''
+        return instr.split(" ")
+    
+    def execute(self, instr):
+        '''
+        Take instr in [instr, ...operands] format
+        Return ALU Result
+        '''
+        # Vector Operations
+        if instr[0] == "ADDVV":
+            pass
+        if instr[0] == "ADDVS":
+            pass
+        if instr[0] == "SUBVV":
+            pass
+        if instr[0] == "SUBVS":
+            pass
+        if instr[0] == "MULVV":
+            pass
+        if instr[0] == "MULVS":
+            pass
+        if instr[0] == "DIVVV":
+            pass
+        if instr[0] == "DIVVS":
+            pass
+        
+        # Vector Mask Register Operations
+        # Change __ to EQ NE GT LT GE LE
+        if instr[0] == "S__VV":
+            pass
+        if instr[0] == "S__VS":
+            pass
+        if instr[0] == "CVM":
+            pass
+        if instr[0] == "POP":
+            pass
+
+        # Vector Length Register Operations
+        if instr[0] == "MTCL":
+            pass
+        if instr[0] == "MFCL":
+            pass
+
+        # Memory Access Operations
+        if instr[0] == "LV":
+            pass
+        if instr[0] == "SV":
+            pass
+        if instr[0] == "LVWS":
+            pass
+        if instr[0] == "SVWS":
+            pass
+        if instr[0] == "LVI":
+            pass
+        if instr[0] == "SVI":
+            pass
+        if instr[0] == "LS":
+            pass
+        if instr[0] == "SS":
+            pass
+
+        # Scalar Operations
+        if instr[0] == "ADD":
+            pass
+        if instr[0] == "SUB":
+            pass
+        if instr[0] == "AND":
+            pass
+        if instr[0] == "OR":
+            pass
+        if instr[0] == "XOR":
+            pass
+        if instr[0] == "SLL":
+            pass
+        if instr[0] == "SRL":
+            pass
+        if instr[0] == "SRA":
+            pass
+
+        # Control operations
+        if instr[0] == "B__":
+            pass
+
+        # Register-Register Shuffle
+        if instr[0] == "UNPACKLO":
+            pass
+        if instr[0] == "UNPACKHI":
+            pass
+        if instr[0] == "PACKLO":
+            pass
+        if instr[0] == "PACKHI":
+            pass
+
+        # HALT
+
+        
 
     def dumpregs(self, iodir):
         for rf in self.RFs.values():
             rf.dump(iodir)
+
+def execute(instr):
+    if instr[0] == "":
+        pass
+
+
 
 if __name__ == "__main__":
     #parse arguments for input file location

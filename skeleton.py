@@ -235,7 +235,7 @@ class VectorCore(object):
             # If element is scalar, make a vector of length length
             return [element for _ in range(length)]
         return element
-    
+    # Vector Arithmatic
     def addv_(self, v1, v2):
         res = []
         v2 = self.handle_scalar(v2, len(v1))
@@ -260,7 +260,7 @@ class VectorCore(object):
         for i in range(len(v1)):
             res.append(v1[i]/v2[i])
         return res
-    
+    # Vector Mask
     def EQ(self, v1, v2):
         res = []
         v2 = self.handle_scalar(v2, len(v1))
@@ -297,6 +297,65 @@ class VectorCore(object):
         for i in range(len(v1)):
             res.append(v1[i] <= v2[i])
         return res
+    # Memory Access
+    ''' 7-10: CVM ... MFCL '''
+    def LV(self, dmem:DMEM, v1, s1):
+        res = []
+        for i in range(len(v1)):
+            res.append(dmem.Read(s1+i))
+        return res
+    def SV(self, dmem:DMEM, v1, s1):
+        for i in range(len(v1)):
+            dmem.Write(s1+i, v1[i])
+        return
+    
+    def LVWS(self, dmem:DMEM, v1, s1, s2):
+        res = []
+        for i in range(len(v1)):
+            res.append(dmem.Read(s1+(i*s2)))
+        return res
+    def SVWS(self, dmem:DMEM, v1, s1, s2):
+        for i in range(len(v1)):
+            dmem.Write(s1+(i*s2), v1[i])
+        return
+    
+    def LVI(self, dmem:DMEM, v1, s1, v2):
+        res = []
+        for i in range(len(v1)):
+            res.append(dmem.Read(s1+v2[i]))
+        return res
+    def SVI(self, dmem:DMEM, v1, s1, v2):
+        for i in range(len(v1)):
+            dmem.Write(s1+v2[i], v1[i])
+        return
+    
+    ''' 17-23: Scalar Operations '''
+
+    def UNPACKLO(self, v1, v2, v3):
+        for i in range(len(v1)):
+            if i%2 == 0:
+                v1[i] = v2[i//2]
+            else:
+                v1[i] = v3[i//2]
+    def UNPACKHI(self, v1, v2, v3):
+        base = len(v1) // 2
+        for i in range(len(v1)):
+            if i%2 == 0:
+                v1[i] = v2[base+ (i//2)]
+            else:
+                v1[i] = v3[base+ (i//2)]
+    def PACKLO(self, v1, v2, v3):
+        base = len(v1) // 2
+        for i in range(len(v1)):
+            v1[i//2] = v2[2*(i//2)]
+            v1[base+ (i//2)] = v3[2*(i//2)]
+    def PACKHI(self, v1, v2, v3):
+        base = len(v1) // 2
+        for i in range(len(v1)):
+            v1[i//2] = v2[2*(i//2) + 1]
+            v1[base+ (i//2)] = v3[2*(i//2) + 1]
+    
+    ''' HALT '''
 
       
 

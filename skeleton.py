@@ -229,9 +229,78 @@ class Core():
         for rf in self.RFs.values():
             rf.dump(iodir)
 
-def execute(instr):
-    if instr[0] == "":
-        pass
+class VectorCore(object):
+    def handle_scalar(self, element, length):
+        if not (isinstance(element, (list, tuple, dict, set, frozenset)) or hasattr(element, '__iter__')):
+            # If element is scalar, make a vector of length length
+            return [element for _ in range(length)]
+        return element
+    
+    def addv_(self, v1, v2):
+        res = []
+        v2 = self.handle_scalar(v2, len(v1))
+        for i in range(len(v1)):
+            res.append(v1[i]+v2[i])
+        return res
+    def subv_(self, v1, v2):
+        res = []
+        v2 = self.handle_scalar(v2, len(v1))
+        for i in range(len(v1)):
+            res.append(v1[i]-v2[i])
+        return res
+    def mulv_(self, v1, v2):
+        res = []
+        v2 = self.handle_scalar(v2, len(v1))
+        for i in range(len(v1)):
+            res.append(v1[i]*v2[i])
+        return res
+    def divv_(self, v1, v2):
+        res = []
+        v2 = self.handle_scalar(v2, len(v1))
+        for i in range(len(v1)):
+            res.append(v1[i]/v2[i])
+        return res
+    
+    def EQ(self, v1, v2):
+        res = []
+        v2 = self.handle_scalar(v2, len(v1))
+        for i in range(len(v1)):
+            res.append(v1[i] == v2[i])
+        return res
+    def NE(self, v1, v2):
+        res = []
+        v2 = self.handle_scalar(v2, len(v1))
+        for i in range(len(v1)):
+            res.append(v1[i] != v2[i])
+        return res
+    def GT(self, v1, v2):
+        res = []
+        v2 = self.handle_scalar(v2, len(v1))
+        for i in range(len(v1)):
+            res.append(v1[i] > v2[i])
+        return res
+    def GE(self, v1, v2):
+        res = []
+        v2 = self.handle_scalar(v2, len(v1))
+        for i in range(len(v1)):
+            res.append(v1[i] >= v2[i])
+        return res
+    def LT(self, v1, v2):
+        res = []
+        v2 = self.handle_scalar(v2, len(v1))
+        for i in range(len(v1)):
+            res.append(v1[i] < v2[i])
+        return res
+    def LE(self, v1, v2):
+        res = []
+        v2 = self.handle_scalar(v2, len(v1))
+        for i in range(len(v1)):
+            res.append(v1[i] <= v2[i])
+        return res
+
+      
+
+
 
 
 

@@ -111,12 +111,14 @@ class Core():
         instr_idx = 0 
         # Execution
         while(True):
-            instr_idx += 1
             instr = self.fetch(instr_idx)
             
             instr = self.decode(instr)
 
-            instr = self.execute(instr)
+            self.execute(instr)
+            instr_idx += 1
+            if instr_idx == 2:
+                break
 
     def fetch(self, idx):
         '''
@@ -136,6 +138,10 @@ class Core():
         Take instr in [instr, ...operands] format
         Return ALU Result
         '''
+        vector_core = VectorCore()
+
+        VRF = self.RFs["VRF"]
+        SRF = self.RFs["SRF"]
         # Vector Operations
         if instr[0] == "ADDVV":
             pass
@@ -173,7 +179,10 @@ class Core():
 
         # Memory Access Operations
         if instr[0] == "LV":
-            pass
+            res = vector_core.LV(self.VDMEM, VRF.Read(1), SRF.Read(1))
+            VRF.Write(1, res)
+
+            print("Loaded: ", VRF.Read(1))
         if instr[0] == "SV":
             pass
         if instr[0] == "LVWS":
@@ -358,6 +367,11 @@ class VectorCore(object):
     ''' HALT '''
 
       
+class ScalarCore(object):
+    def LS(self, dmem:DMEM, s1, imm):
+        return dmem.Read(s1+imm)
+
+
 
 
 

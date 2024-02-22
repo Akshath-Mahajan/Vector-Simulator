@@ -41,16 +41,18 @@ class DMEM(object):
         except:
             print(self.name, "- ERROR: Couldn't open input file in path:", self.ipfilepath)
 
-    def Read(self, idx): # Use this to read from DMEM.
+    def Read(self, idx: int): # Use this to read from DMEM.
         if idx < self.size:
             return self.data[idx]
-        return False    # In case we need to check "Read" results
+        else:
+            print("DMEM - ERROR: Invalid memory access at index: ", idx, " with memory size: ", self.size)
 
-    def Write(self, idx, val): # Use this to write into DMEM.
+    def Write(self, idx: int, val): # Use this to write into DMEM.
         if idx < self.size:
             self.data[idx] = val
-            return True
-        return False
+            return self.data[idx]
+        else:
+            print("DMEM - ERROR: Invalid memory access at index: ", idx, " with memory size: ", self.size)
 
     def dump(self):
         try:
@@ -71,17 +73,18 @@ class RegisterFile(object):
         self.max_value  = pow(2, self.reg_bits-1) - 1
         self.registers  = [[0x0 for e in range(self.vec_length)] for r in range(self.reg_count)] # list of lists of integers
 
-    def Read(self, idx):
+    def Read(self, idx: int):
         if idx < self.reg_count:
             return self.registers[idx]
-        return False
-    # Read returns entire register
-    # Write takes  entire register
-    def Write(self, idx, val):
+        else:
+            print(self.name, "- ERROR: Invalid register access at index: ", idx, " with register count: ", self.reg_count)
+
+    def Write(self, idx: int, val: list):
         if idx < self.reg_count:
             self.registers[idx] = val
-            return True
-        return False
+            return self.registers[idx]
+        else:
+            print(self.name, "- ERROR: Invalid register access at index: ", idx, " with register count: ", self.reg_count)
 
     def dump(self, iodir):
         opfilepath = os.path.abspath(os.path.join(iodir, self.name + ".txt"))
@@ -104,278 +107,565 @@ class Core():
         self.RFs = {"SRF": RegisterFile("SRF", 8),
                     "VRF": RegisterFile("VRF", 8, 64)}
         
-        # Your code here.
+        ### Special Purpose Registers
+        self.SRs = {"VM": RegisterFile("VM", 1, 1, 64),
+                     "VL": RegisterFile("VL", 1)}
+        
+        # Initialising Vector Length Register as the MVL
+        self.SRs["VL"].Write(0, [self.RFs["VRF"].vec_length])
+
+    def get_operands(self, instruction: list):
+        if len(instruction) == 4:
+            destination = str(instruction[1])
+            operand1 = str(instruction[2])
+            operand2 = str(instruction[3])
+            destination_reg_idx = int(destination[2:])
+            operand1_reg_idx = int(operand1[2:])
+            if operand2.isdigit():
+                imm = int(operand2)
+                return destination_reg_idx, operand1_reg_idx, imm
+            else:
+                operand2_reg_idx = int(operand2[2:])
+                return destination_reg_idx, operand1_reg_idx, operand2_reg_idx
+        elif len(instruction) == 3:
+            destination = str(instruction[1])
+            operand1 = str(instruction[2])
+            destination_reg_idx = int(destination[2:])
+            operand1_reg_idx = int(operand1[2:])
+            return destination_reg_idx, operand1_reg_idx
+        elif len(instruction) == 2:
+            operand1 = str(instruction[1])
+            operand1_reg_idx = int(operand1[2:])
+            return operand1_reg_idx
+        else:
+            # -- ERROR --
+            return -1
         
     def run(self):
-        # Initialization
-        instr_idx = 0 
-        # Execution
+        program_counter = 0
+        
         while(True):
-            instr = self.fetch(instr_idx)
+            # --- ISSUE Stage ---
+            current_instruction = imem.Read(program_counter).split(" ")
+            print("Program Counter     : ", program_counter)
+            print("Current Instruction : ", current_instruction)
             
-            instr = self.decode(instr)
+            # --- DECODE + EXECUTE + WRITEBACK Stage ---
+            instruction_word = current_instruction[0]
+            print("Instruction Word    : ", instruction_word)
 
-            self.execute(instr)
-            instr_idx += 1
-            if instr_idx == 2:
+            if instruction_word == "HALT":
+                # --- EXECUTE : HALT --- 
+                print("Stopping the program execution!")
                 break
+            
+            # ----- VECTOR ARITHMETIC OPERATIONS
+            elif instruction_word == "ADDVV":
+                # --- DECODE : ADDVV ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : ADDVV ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                # print("Current vector 1 value : ", vector1)
+                # print("Current vector 2 value : ", vector2)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = vector1[i] + vector2[i]
+                # --- WRITEBACK : ADDVV ---
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+                # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
+            elif instruction_word == "ADDVS":
+                # --- DECODE : ADDVS ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : ADDVS ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                vector2 = [scalar2 for _ in range(self.RFs["VRF"].vec_length)]
+                # print("Current vector 1 value : ", vector1)
+                # print("Current vector 2 value : ", vector2)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = vector1[i] + vector2[i]
+                # --- WRITEBACK : ADDVS ---
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+                # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
+            elif instruction_word == "SUBVV":
+                # --- DECODE : SUBVV ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SUBVV ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                # print("Current vector 1 value : ", vector1)
+                # print("Current vector 2 value : ", vector2)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = vector1[i] - vector2[i]
+                # --- WRITEBACK : SUBVV ---
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+                # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
+                # TODO - Test this instruction
+            elif instruction_word == "SUBVS":
+                # --- DECODE : SUBVS ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SUBVS ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                vector2 = [scalar2 for _ in range(self.RFs["VRF"].vec_length)]
+                # print("Current vector 1 value : ", vector1)
+                # print("Current vector 2 value : ", vector2)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = vector1[i] - vector2[i]
+                # --- WRITEBACK : SUBVS ---
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+                # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
+                # TODO - Test this instruction
+            elif instruction_word == "MULVV":
+                # --- DECODE : MULVV ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : MULVV ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                # print("Current vector 1 value : ", vector1)
+                # print("Current vector 2 value : ", vector2)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = vector1[i] * vector2[i]
+                # --- WRITEBACK : MULVV ---
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+                # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
+                # TODO - Test this instruction
+            elif instruction_word == "MULVS":
+                # --- DECODE : MULVS ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : MULVS ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                vector2 = [scalar2 for _ in range(self.RFs["VRF"].vec_length)]
+                # print("Current vector 1 value : ", vector1)
+                # print("Current vector 2 value : ", vector2)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = vector1[i] * vector2[i]
+                # --- WRITEBACK : MULVS ---
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+                # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
+                # TODO - Test this instruction
+            elif instruction_word == "DIVVV":
+                # --- DECODE : DIVVV ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : DIVVV ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                # print("Current vector 1 value : ", vector1)
+                # print("Current vector 2 value : ", vector2)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    # TODO - Check Divide by zero condition
+                    result[i] = vector1[i] // vector2[i]
+                # --- WRITEBACK : DIVVV ---
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+                # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
+                # TODO - Test this instruction
+            elif instruction_word == "DIVVS":
+                # --- DECODE : DIVVS ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : DIVVS ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                vector2 = [scalar2 for _ in range(self.RFs["VRF"].vec_length)]
+                # print("Current vector 1 value : ", vector1)
+                # print("Current vector 2 value : ", vector2)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    # TODO - Check Divide by zero condition
+                    result[i] = vector1[i] // vector2[i]
+                # --- WRITEBACK : DIVVS ---
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+                # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
+                # TODO - Test this instruction
+            
+            # ----- VECTOR MASK REGISTER OPERATIONS
+            elif instruction_word == "SEQVV":
+                pass
+            elif instruction_word == "SEQVS":
+                pass
+            elif instruction_word == "SNEVV":
+                pass
+            elif instruction_word == "SNEVS":
+                pass
+            elif instruction_word == "SGTVV":
+                pass
+            elif instruction_word == "SGTVS":
+                pass
+            elif instruction_word == "SLTVV":
+                pass
+            elif instruction_word == "SLTVS":
+                pass
+            elif instruction_word == "SGEVV":
+                pass
+            elif instruction_word == "SGEVS":
+                pass
+            elif instruction_word == "SLEVV":
+                pass
+            elif instruction_word == "SLEVS":
+                pass
+            elif instruction_word == "CVM":
+                # --- EXECUTE : CVM --- 
+                # print("Clearing the Vector Mask Register...")
+                # print("Current VM Value : ", bin(self.SRs["VM"].Read(0)[0]))
+                self.SRs["VM"].Write(0, [int('1' * self.RFs["VRF"].vec_length, 2)])
+                # print("Updated VM Value : ", bin(self.SRs["VM"].Read(0)[0]), self.SRs["VM"].Read(0)[0])
+            elif instruction_word == "POP":
+                # --- DECODE : POP ---
+                destination_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : POP --- 
+                count = bin(self.SRs["VM"].Read(0)[0]).count("1")
+                if count <= self.SRs["VM"].reg_bits:
+                    self.RFs["SRF"].Write(destination_reg_idx, [count])
+                else:
+                    print("Invalid number popped, debug code!")
+                    self.RFs["SRF"].Write(destination_reg_idx, [self.SRs["VM"].reg_bits])
+                # TODO - Test this instruction
+            
+            # ----- VECTOR LENGTH REGISTER OPERATIONS
+            elif instruction_word == "MTCL":
+                # --- DECODE : MTCL ---
+                operand_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : MTCL --- 
+                # print("Moving the current value of operand in Vector Length Register...")
+                # print("Current VL Value  : ", self.SRs["VL"].Read(0)[0])
+                # print("Current operand Value : ", self.RFs["SRF"].Read(operand_reg_idx)[0])
+                value = self.RFs["SRF"].Read(operand_reg_idx)[0]
+                if value <= self.RFs["VRF"].vec_length:
+                    self.SRs["VL"].Write(0, [value])
+                    # print("Updated VL Value  : ", self.SRs["VL"].Read(0)[0])
+                else:
+                    print("Invalid Value for Vector Length Register, debug code!")
+            elif instruction_word == "MFCL":
+                # --- DECODE : MFCL ---
+                operand_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : MFCL --- 
+                # print("Moving the current value of Vector Length Register in operand...")
+                # print("Current VL Value  : ", self.SRs["VL"].Read(0)[0])
+                # print("Current operand Value : ", self.RFs["SRF"].Read(operand_reg_idx)[0])
+                self.RFs["SRF"].Write(operand_reg_idx, self.SRs["VL"].Read(0))
+                # print("Updated operand Value : ", self.RFs["SRF"].Read(operand_reg_idx)[0])
+            
+            # ----- MEMORY ACCESS OPERATIONS
+            elif instruction_word == "LV":
+                ### --- DECODE : LV ---
+                destination_reg_idx, operand1_reg_idx = self.get_operands(current_instruction)
+                ### --- EXECUTE : LV ---
+                memory_address = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = self.VDMEM.Read(memory_address + i)
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+            elif instruction_word == "SV":
+                ### --- DECODE : SV ---
+                destination_reg_idx, operand1_reg_idx = self.get_operands(current_instruction)
+                ### --- EXECUTE : SV ---
+                memory_address = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                vector1 = self.RFs["VRF"].Read(destination_reg_idx)
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    self.VDMEM.Write(memory_address + i, vector1[i])
+            elif instruction_word == "LVWS":
+                ### --- DECODE : LVWS ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                ### --- EXECUTE : LVWS ---
+                memory_address = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                stride = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = self.VDMEM.Read(memory_address + (i * stride))
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+            elif instruction_word == "SVWS":
+                ### --- DECODE : SVWS ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                ### --- EXECUTE : SVWS ---
+                memory_address = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                stride = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                vector1 = self.RFs["VRF"].Read(destination_reg_idx)
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    self.VDMEM.Write(memory_address + (i * stride), vector1[i])
+                # TODO - Test this instruction
+            elif instruction_word == "LVI":
+                ### --- DECODE : LVI ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                ### --- EXECUTE : LVI ---
+                base_address = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                offsets = self.RFs["VRF"].Read(operand2_reg_idx)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = self.VDMEM.Read(base_address + offsets[i])
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+            elif instruction_word == "SVI":
+                ### --- DECODE : SVI ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                ### --- EXECUTE : SVI ---
+                base_address = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                offsets = self.RFs["VRF"].Read(operand2_reg_idx)
+                vector1 = self.RFs["VRF"].Read(destination_reg_idx)
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    self.VDMEM.Write(base_address + offsets[i], vector1[i])
+                # TODO - Test this instruction
+            elif instruction_word == "LS":
+                # --- DECODE : LS ---
+                destination_reg_idx, operand1_reg_idx, imm = self.get_operands(current_instruction)
+                # --- EXECUTE : LS ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                memory_address = scalar1 + imm
+                data = self.SDMEM.Read(memory_address)
+                self.RFs["SRF"].Write(destination_reg_idx, [data])
+            elif instruction_word == "SS":
+                # --- DECODE : SS ---
+                operand1_reg_idx, operand2_reg_idx, imm = self.get_operands(current_instruction)
+                # --- EXECUTE : SS ---
+                data = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar1 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                memory_address = scalar1 + imm
+                self.SDMEM.Write(memory_address, data)
 
-    def fetch(self, idx):
-        '''
-        Fetch instr at idx
-        '''
-        return self.IMEM.Read(idx)
-    
-    def decode(self, instr):
-        '''
-        Take instr in string format
-        Return as: [instr, ...operands]
-        '''
-        return instr.split(" ")
-    
-    def execute(self, instr):
-        '''
-        Take instr in [instr, ...operands] format
-        Return ALU Result
-        '''
-        vector_core = VectorCore()
+            # ----- SCALAR OPERATIONS
+            elif instruction_word == "ADD":
+                # --- DECODE : ADD ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : ADD ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                result = scalar1 + scalar2
+                self.RFs["SRF"].Write(destination_reg_idx, [result])
+            elif instruction_word == "SUB":
+                # --- DECODE : SUB ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SUB ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                result = scalar1 - scalar2
+                self.RFs["SRF"].Write(destination_reg_idx, [result])
+            elif instruction_word == "AND":
+                # --- DECODE : AND ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : AND ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                result = scalar1 & scalar2
+                self.RFs["SRF"].Write(destination_reg_idx, [result])
+                # TODO - Test this instruction
+            elif instruction_word == "OR":
+                # --- DECODE : OR ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : OR ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                result = scalar1 | scalar2
+                self.RFs["SRF"].Write(destination_reg_idx, [result])
+                # TODO - Test this instruction
+            elif instruction_word == "XOR":
+                # --- DECODE : XOR ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : XOR ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                result = scalar1 ^ scalar2
+                self.RFs["SRF"].Write(destination_reg_idx, [result])
+                # TODO - Test this instruction
+            elif instruction_word == "SLL":
+                # --- DECODE : SLL ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SLL ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                result = scalar1 << scalar2
+                self.RFs["SRF"].Write(destination_reg_idx, [result])
+                # TODO - Test this instruction
+            elif instruction_word == "SRL":
+                # --- DECODE : SRL ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SRL ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                unsigned_integer = scalar1 % (1 << self.RFs["SRF"].reg_bits)
+                result = unsigned_integer >> scalar2
+                self.RFs["SRF"].Write(destination_reg_idx, [result])
+                # TODO - Test this instruction
+                # https://realpython.com/python-bitwise-operators/#arithmetic-vs-logical-shift
+            elif instruction_word == "SRA":
+                # --- DECODE : SRA ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SRA ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                result = scalar1 >> scalar2
+                self.RFs["SRF"].Write(destination_reg_idx, [result])
+                # TODO - Test this instruction
 
-        VRF = self.RFs["VRF"]
-        SRF = self.RFs["SRF"]
-        # Vector Operations
-        if instr[0] == "ADDVV":
-            pass
-        if instr[0] == "ADDVS":
-            pass
-        if instr[0] == "SUBVV":
-            pass
-        if instr[0] == "SUBVS":
-            pass
-        if instr[0] == "MULVV":
-            pass
-        if instr[0] == "MULVS":
-            pass
-        if instr[0] == "DIVVV":
-            pass
-        if instr[0] == "DIVVS":
-            pass
-        
-        # Vector Mask Register Operations
-        # Change __ to EQ NE GT LT GE LE
-        if instr[0] == "S__VV":
-            pass
-        if instr[0] == "S__VS":
-            pass
-        if instr[0] == "CVM":
-            pass
-        if instr[0] == "POP":
-            pass
+            # ----- CONTROL OPERATIONS
+            elif instruction_word == "BEQ":
+                pass
+            elif instruction_word == "BNE":
+                pass
+            elif instruction_word == "BGT":
+                pass
+            elif instruction_word == "BLT":
+                pass
+            elif instruction_word == "BGE":
+                pass
+            elif instruction_word == "BLE":
+                pass
+            
+            # ----- REGISTER-REGISTER SHUFFLE
+            elif instruction_word == "UNPACKLO":
+                pass
+            elif instruction_word == "UNPACKHI":
+                pass
+            elif instruction_word == "PACKLO":
+                pass
+            elif instruction_word == "PACKHI":
+                pass
 
-        # Vector Length Register Operations
-        if instr[0] == "MTCL":
-            pass
-        if instr[0] == "MFCL":
-            pass
+            else:
+                print("DECODE - ERROR: Invalid instruction at program counter: ", program_counter)
 
-        # Memory Access Operations
-        if instr[0] == "LV":
-            res = vector_core.LV(self.VDMEM, VRF.Read(1), SRF.Read(1))
-            VRF.Write(1, res)
-
-            print("Loaded: ", VRF.Read(1))
-        if instr[0] == "SV":
-            pass
-        if instr[0] == "LVWS":
-            pass
-        if instr[0] == "SVWS":
-            pass
-        if instr[0] == "LVI":
-            pass
-        if instr[0] == "SVI":
-            pass
-        if instr[0] == "LS":
-            pass
-        if instr[0] == "SS":
-            pass
-
-        # Scalar Operations
-        if instr[0] == "ADD":
-            pass
-        if instr[0] == "SUB":
-            pass
-        if instr[0] == "AND":
-            pass
-        if instr[0] == "OR":
-            pass
-        if instr[0] == "XOR":
-            pass
-        if instr[0] == "SLL":
-            pass
-        if instr[0] == "SRL":
-            pass
-        if instr[0] == "SRA":
-            pass
-
-        # Control operations
-        if instr[0] == "B__":
-            pass
-
-        # Register-Register Shuffle
-        if instr[0] == "UNPACKLO":
-            pass
-        if instr[0] == "UNPACKHI":
-            pass
-        if instr[0] == "PACKLO":
-            pass
-        if instr[0] == "PACKHI":
-            pass
-
-        # HALT
-
-        
+            program_counter += 1
+            print("")
 
     def dumpregs(self, iodir):
         for rf in self.RFs.values():
             rf.dump(iodir)
 
-class VectorCore(object):
-    def handle_scalar(self, element, length):
-        if not (isinstance(element, (list, tuple, dict, set, frozenset)) or hasattr(element, '__iter__')):
-            # If element is scalar, make a vector of length length
-            return [element for _ in range(length)]
-        return element
-    # Vector Arithmatic
-    def addv_(self, v1, v2):
-        res = []
-        v2 = self.handle_scalar(v2, len(v1))
-        for i in range(len(v1)):
-            res.append(v1[i]+v2[i])
-        return res
-    def subv_(self, v1, v2):
-        res = []
-        v2 = self.handle_scalar(v2, len(v1))
-        for i in range(len(v1)):
-            res.append(v1[i]-v2[i])
-        return res
-    def mulv_(self, v1, v2):
-        res = []
-        v2 = self.handle_scalar(v2, len(v1))
-        for i in range(len(v1)):
-            res.append(v1[i]*v2[i])
-        return res
-    def divv_(self, v1, v2):
-        res = []
-        v2 = self.handle_scalar(v2, len(v1))
-        for i in range(len(v1)):
-            res.append(v1[i]/v2[i])
-        return res
-    # Vector Mask
-    def EQ(self, v1, v2):
-        res = []
-        v2 = self.handle_scalar(v2, len(v1))
-        for i in range(len(v1)):
-            res.append(v1[i] == v2[i])
-        return res
-    def NE(self, v1, v2):
-        res = []
-        v2 = self.handle_scalar(v2, len(v1))
-        for i in range(len(v1)):
-            res.append(v1[i] != v2[i])
-        return res
-    def GT(self, v1, v2):
-        res = []
-        v2 = self.handle_scalar(v2, len(v1))
-        for i in range(len(v1)):
-            res.append(v1[i] > v2[i])
-        return res
-    def GE(self, v1, v2):
-        res = []
-        v2 = self.handle_scalar(v2, len(v1))
-        for i in range(len(v1)):
-            res.append(v1[i] >= v2[i])
-        return res
-    def LT(self, v1, v2):
-        res = []
-        v2 = self.handle_scalar(v2, len(v1))
-        for i in range(len(v1)):
-            res.append(v1[i] < v2[i])
-        return res
-    def LE(self, v1, v2):
-        res = []
-        v2 = self.handle_scalar(v2, len(v1))
-        for i in range(len(v1)):
-            res.append(v1[i] <= v2[i])
-        return res
-    # Memory Access
-    ''' 7-10: CVM ... MFCL '''
-    def LV(self, dmem:DMEM, v1, s1):
-        res = []
-        for i in range(len(v1)):
-            res.append(dmem.Read(s1+i))
-        return res
-    def SV(self, dmem:DMEM, v1, s1):
-        for i in range(len(v1)):
-            dmem.Write(s1+i, v1[i])
-        return
+# class VectorCore(object):
+#     def handle_scalar(self, element, length):
+#         if not (isinstance(element, (list, tuple, dict, set, frozenset)) or hasattr(element, '__iter__')):
+#             # If element is scalar, make a vector of length length
+#             return [element for _ in range(length)]
+#         return element
+#     # Vector Arithmatic
+#     def addv_(self, v1, v2):
+#         res = []
+#         v2 = self.handle_scalar(v2, len(v1))
+#         for i in range(len(v1)):
+#             res.append(v1[i]+v2[i])
+#         return res
+#     def subv_(self, v1, v2):
+#         res = []
+#         v2 = self.handle_scalar(v2, len(v1))
+#         for i in range(len(v1)):
+#             res.append(v1[i]-v2[i])
+#         return res
+#     def mulv_(self, v1, v2):
+#         res = []
+#         v2 = self.handle_scalar(v2, len(v1))
+#         for i in range(len(v1)):
+#             res.append(v1[i]*v2[i])
+#         return res
+#     def divv_(self, v1, v2):
+#         res = []
+#         v2 = self.handle_scalar(v2, len(v1))
+#         for i in range(len(v1)):
+#             res.append(v1[i]/v2[i])
+#         return res
+#     # Vector Mask
+#     def EQ(self, v1, v2):
+#         res = []
+#         v2 = self.handle_scalar(v2, len(v1))
+#         for i in range(len(v1)):
+#             res.append(v1[i] == v2[i])
+#         return res
+#     def NE(self, v1, v2):
+#         res = []
+#         v2 = self.handle_scalar(v2, len(v1))
+#         for i in range(len(v1)):
+#             res.append(v1[i] != v2[i])
+#         return res
+#     def GT(self, v1, v2):
+#         res = []
+#         v2 = self.handle_scalar(v2, len(v1))
+#         for i in range(len(v1)):
+#             res.append(v1[i] > v2[i])
+#         return res
+#     def GE(self, v1, v2):
+#         res = []
+#         v2 = self.handle_scalar(v2, len(v1))
+#         for i in range(len(v1)):
+#             res.append(v1[i] >= v2[i])
+#         return res
+#     def LT(self, v1, v2):
+#         res = []
+#         v2 = self.handle_scalar(v2, len(v1))
+#         for i in range(len(v1)):
+#             res.append(v1[i] < v2[i])
+#         return res
+#     def LE(self, v1, v2):
+#         res = []
+#         v2 = self.handle_scalar(v2, len(v1))
+#         for i in range(len(v1)):
+#             res.append(v1[i] <= v2[i])
+#         return res
+#     # Memory Access
+#     ''' 7-10: CVM ... MFCL '''
+#     def LV(self, dmem:DMEM, v1, s1):
+#         res = []
+#         for i in range(len(v1)):
+#             res.append(dmem.Read(s1+i))
+#         return res
+#     def SV(self, dmem:DMEM, v1, s1):
+#         for i in range(len(v1)):
+#             dmem.Write(s1+i, v1[i])
+#         return
     
-    def LVWS(self, dmem:DMEM, v1, s1, s2):
-        res = []
-        for i in range(len(v1)):
-            res.append(dmem.Read(s1+(i*s2)))
-        return res
-    def SVWS(self, dmem:DMEM, v1, s1, s2):
-        for i in range(len(v1)):
-            dmem.Write(s1+(i*s2), v1[i])
-        return
+#     def LVWS(self, dmem:DMEM, v1, s1, s2):
+#         res = []
+#         for i in range(len(v1)):
+#             res.append(dmem.Read(s1+(i*s2)))
+#         return res
+#     def SVWS(self, dmem:DMEM, v1, s1, s2):
+#         for i in range(len(v1)):
+#             dmem.Write(s1+(i*s2), v1[i])
+#         return
     
-    def LVI(self, dmem:DMEM, v1, s1, v2):
-        res = []
-        for i in range(len(v1)):
-            res.append(dmem.Read(s1+v2[i]))
-        return res
-    def SVI(self, dmem:DMEM, v1, s1, v2):
-        for i in range(len(v1)):
-            dmem.Write(s1+v2[i], v1[i])
-        return
+#     def LVI(self, dmem:DMEM, v1, s1, v2):
+#         res = []
+#         for i in range(len(v1)):
+#             res.append(dmem.Read(s1+v2[i]))
+#         return res
+#     def SVI(self, dmem:DMEM, v1, s1, v2):
+#         for i in range(len(v1)):
+#             dmem.Write(s1+v2[i], v1[i])
+#         return
     
-    ''' 17-23: Scalar Operations '''
+#     ''' 17-23: Scalar Operations '''
 
-    def UNPACKLO(self, v1, v2, v3):
-        for i in range(len(v1)):
-            if i%2 == 0:
-                v1[i] = v2[i//2]
-            else:
-                v1[i] = v3[i//2]
-    def UNPACKHI(self, v1, v2, v3):
-        base = len(v1) // 2
-        for i in range(len(v1)):
-            if i%2 == 0:
-                v1[i] = v2[base+ (i//2)]
-            else:
-                v1[i] = v3[base+ (i//2)]
-    def PACKLO(self, v1, v2, v3):
-        base = len(v1) // 2
-        for i in range(len(v1)):
-            v1[i//2] = v2[2*(i//2)]
-            v1[base+ (i//2)] = v3[2*(i//2)]
-    def PACKHI(self, v1, v2, v3):
-        base = len(v1) // 2
-        for i in range(len(v1)):
-            v1[i//2] = v2[2*(i//2) + 1]
-            v1[base+ (i//2)] = v3[2*(i//2) + 1]
+#     def UNPACKLO(self, v1, v2, v3):
+#         for i in range(len(v1)):
+#             if i%2 == 0:
+#                 v1[i] = v2[i//2]
+#             else:
+#                 v1[i] = v3[i//2]
+#     def UNPACKHI(self, v1, v2, v3):
+#         base = len(v1) // 2
+#         for i in range(len(v1)):
+#             if i%2 == 0:
+#                 v1[i] = v2[base+ (i//2)]
+#             else:
+#                 v1[i] = v3[base+ (i//2)]
+#     def PACKLO(self, v1, v2, v3):
+#         base = len(v1) // 2
+#         for i in range(len(v1)):
+#             v1[i//2] = v2[2*(i//2)]
+#             v1[base+ (i//2)] = v3[2*(i//2)]
+#     def PACKHI(self, v1, v2, v3):
+#         base = len(v1) // 2
+#         for i in range(len(v1)):
+#             v1[i//2] = v2[2*(i//2) + 1]
+#             v1[base+ (i//2)] = v3[2*(i//2) + 1]
     
-    ''' HALT '''
+#     ''' HALT '''
 
-      
-class ScalarCore(object):
-    def LS(self, dmem:DMEM, s1, imm):
-        return dmem.Read(s1+imm)
-
-
-
-
-
-
+# class ScalarCore(object):
+#     def LS(self, dmem:DMEM, s1, imm):
+#         return dmem.Read(s1+imm)
 
 if __name__ == "__main__":
     #parse arguments for input file location

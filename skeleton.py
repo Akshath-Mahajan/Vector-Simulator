@@ -159,6 +159,10 @@ class Core():
                 print("Stopping the program execution!")
                 break
             
+            ################################################################
+            # ADD MASKING LOGIC TO ALL VECTOR INSTRUCTIONS!!!
+            ################################################################
+
             # ----- VECTOR ARITHMETIC OPERATIONS
             elif instruction_word == "ADDVV":
                 # --- DECODE : ADDVV ---
@@ -287,29 +291,179 @@ class Core():
             
             # ----- VECTOR MASK REGISTER OPERATIONS
             elif instruction_word == "SEQVV":
-                pass
+                # --- DECODE : SEQVV ---
+                operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SEQVV ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                result = [0] * self.RFs["VRF"].vec_length
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = 1 if vector1[i] == vector2[i] else 0
+                # --- WRITEBACK : SEQVV ---
+                result_string = ''.join(str(x) for x in result)
+                vector_mask_value = int(result_string, 2)
+                self.SRs["VM"].Write(0, [vector_mask_value])
+                # TODO - Test this instruction
             elif instruction_word == "SEQVS":
-                pass
+                # --- DECODE : SEQVS ---
+                operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SEQVS ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                vector2 = [scalar2 for _ in range(self.RFs["VRF"].vec_length)]
+                result = [0] * self.RFs["VRF"].vec_length
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = 1 if vector1[i] == vector2[i] else 0
+                # --- WRITEBACK : SEQVS ---
+                result_string = ''.join(str(x) for x in result)
+                vector_mask_value = int(result_string, 2)
+                self.SRs["VM"].Write(0, [vector_mask_value])
+                # TODO - Test this instruction
             elif instruction_word == "SNEVV":
-                pass
+                # --- DECODE : SNEVV ---
+                operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SNEVV ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                result = [0] * self.RFs["VRF"].vec_length
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = 1 if vector1[i] != vector2[i] else 0
+                # --- WRITEBACK : SNEVV ---
+                result_string = ''.join(str(x) for x in result)
+                vector_mask_value = int(result_string, 2)
+                self.SRs["VM"].Write(0, [vector_mask_value])
+                # TODO - Test this instruction
             elif instruction_word == "SNEVS":
-                pass
+                # --- DECODE : SNEVS ---
+                operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SNEVS ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                vector2 = [scalar2 for _ in range(self.RFs["VRF"].vec_length)]
+                result = [0] * self.RFs["VRF"].vec_length
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = 1 if vector1[i] != vector2[i] else 0
+                # --- WRITEBACK : SNEVS ---
+                result_string = ''.join(str(x) for x in result)
+                vector_mask_value = int(result_string, 2)
+                self.SRs["VM"].Write(0, [vector_mask_value])
+                # TODO - Test this instruction
             elif instruction_word == "SGTVV":
-                pass
+                # --- DECODE : SGTVV ---
+                operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SGTVV ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                result = [0] * self.RFs["VRF"].vec_length
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = 1 if vector1[i] > vector2[i] else 0
+                # --- WRITEBACK : SGTVV ---
+                result_string = ''.join(str(x) for x in result)
+                vector_mask_value = int(result_string, 2)
+                self.SRs["VM"].Write(0, [vector_mask_value])
+                # TODO - Test this instruction
             elif instruction_word == "SGTVS":
-                pass
+                # --- DECODE : SGTVS ---
+                operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SGTVS ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                vector2 = [scalar2 for _ in range(self.RFs["VRF"].vec_length)]
+                result = [0] * self.RFs["VRF"].vec_length
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = 1 if vector1[i] > vector2[i] else 0
+                # --- WRITEBACK : SGTVS ---
+                result_string = ''.join(str(x) for x in result)
+                vector_mask_value = int(result_string, 2)
+                self.SRs["VM"].Write(0, [vector_mask_value])
+                # TODO - Test this instruction
             elif instruction_word == "SLTVV":
-                pass
+                # --- DECODE : SLTVV ---
+                operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SLTVV ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                result = [0] * self.RFs["VRF"].vec_length
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = 1 if vector1[i] < vector2[i] else 0
+                # --- WRITEBACK : SLTVV ---
+                result_string = ''.join(str(x) for x in result)
+                vector_mask_value = int(result_string, 2)
+                self.SRs["VM"].Write(0, [vector_mask_value])
+                # TODO - Test this instruction
             elif instruction_word == "SLTVS":
-                pass
+                # --- DECODE : SLTVS ---
+                operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SLTVS ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                vector2 = [scalar2 for _ in range(self.RFs["VRF"].vec_length)]
+                result = [0] * self.RFs["VRF"].vec_length
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = 1 if vector1[i] < vector2[i] else 0
+                # --- WRITEBACK : SLTVS ---
+                result_string = ''.join(str(x) for x in result)
+                vector_mask_value = int(result_string, 2)
+                self.SRs["VM"].Write(0, [vector_mask_value])
+                # TODO - Test this instruction
             elif instruction_word == "SGEVV":
-                pass
+                # --- DECODE : SGEVV ---
+                operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SGEVV ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                result = [0] * self.RFs["VRF"].vec_length
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = 1 if vector1[i] >= vector2[i] else 0
+                # --- WRITEBACK : SGEVV ---
+                result_string = ''.join(str(x) for x in result)
+                vector_mask_value = int(result_string, 2)
+                self.SRs["VM"].Write(0, [vector_mask_value])
+                # TODO - Test this instruction
             elif instruction_word == "SGEVS":
-                pass
+                # --- DECODE : SGEVS ---
+                operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SGEVS ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                vector2 = [scalar2 for _ in range(self.RFs["VRF"].vec_length)]
+                result = [0] * self.RFs["VRF"].vec_length
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = 1 if vector1[i] >= vector2[i] else 0
+                # --- WRITEBACK : SGEVS ---
+                result_string = ''.join(str(x) for x in result)
+                vector_mask_value = int(result_string, 2)
+                self.SRs["VM"].Write(0, [vector_mask_value])
+                # TODO - Test this instruction
             elif instruction_word == "SLEVV":
-                pass
+                # --- DECODE : SLEVV ---
+                operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SLEVV ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                result = [0] * self.RFs["VRF"].vec_length
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = 1 if vector1[i] <= vector2[i] else 0
+                # --- WRITEBACK : SLEVV ---
+                result_string = ''.join(str(x) for x in result)
+                vector_mask_value = int(result_string, 2)
+                self.SRs["VM"].Write(0, [vector_mask_value])
+                # TODO - Test this instruction
             elif instruction_word == "SLEVS":
-                pass
+                # --- DECODE : SLEVS ---
+                operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : SLEVS ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                vector2 = [scalar2 for _ in range(self.RFs["VRF"].vec_length)]
+                result = [0] * self.RFs["VRF"].vec_length
+                for i in range(self.SRs["VL"].Read(0)[0]):
+                    result[i] = 1 if vector1[i] <= vector2[i] else 0
+                # --- WRITEBACK : SLEVS ---
+                result_string = ''.join(str(x) for x in result)
+                vector_mask_value = int(result_string, 2)
+                self.SRs["VM"].Write(0, [vector_mask_value])
+                # TODO - Test this instruction
             elif instruction_word == "CVM":
                 # --- EXECUTE : CVM --- 
                 # print("Clearing the Vector Mask Register...")

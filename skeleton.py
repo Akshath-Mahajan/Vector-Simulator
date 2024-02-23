@@ -139,7 +139,7 @@ class Core():
             return operand1_reg_idx
         else:
             # -- ERROR --
-            return -1
+            return None
         
     def run(self):
         program_counter = 0
@@ -517,13 +517,67 @@ class Core():
             
             # ----- REGISTER-REGISTER SHUFFLE
             elif instruction_word == "UNPACKLO":
-                pass
+                # --- DECODE : UNPACKLO ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : UNPACKLO ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                j = 0
+                for i in range(0, self.SRs["VL"].Read(0)[0] // 2):
+                    result[j] = vector1[i]
+                    result[j+1] = vector2[i]
+                    j += 2
+                # --- WRITEBACK : UNPACKLO ---
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+                # TODO - Test this instruction
             elif instruction_word == "UNPACKHI":
-                pass
+                # --- DECODE : UNPACKHI ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : UNPACKHI ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                j = 0
+                for i in range(self.SRs["VL"].Read(0)[0] // 2, self.SRs["VL"].Read(0)[0]):
+                    result[j] = vector1[i]
+                    result[j+1] = vector2[i]
+                    j += 2
+                # --- WRITEBACK : UNPACKHI ---
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+                # TODO - Test this instruction
             elif instruction_word == "PACKLO":
-                pass
+                # --- DECODE : PACKLO ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : PACKLO ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                j = 0
+                mvl = self.SRs["VL"].Read(0)[0]
+                for i in range(0, mvl, 2):
+                    result[j] = vector1[i]
+                    result[(mvl // 2) + j] = vector2[i]
+                    j += 1
+                # --- WRITEBACK : PACKLO ---
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+                # TODO - Test this instruction
             elif instruction_word == "PACKHI":
-                pass
+                # --- DECODE : PACKHI ---
+                destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
+                # --- EXECUTE : PACKHI ---
+                vector1 = self.RFs["VRF"].Read(operand1_reg_idx)
+                vector2 = self.RFs["VRF"].Read(operand2_reg_idx)
+                result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                j = 0
+                mvl = self.SRs["VL"].Read(0)[0]
+                for i in range(1, mvl, 2):
+                    result[j] = vector1[i]
+                    result[(mvl // 2) + j] = vector2[i]
+                    j += 1
+                # --- WRITEBACK : PACKHI ---
+                self.RFs["VRF"].Write(destination_reg_idx, result)
+                # TODO - Test this instruction
 
             else:
                 print("DECODE - ERROR: Invalid instruction at program counter: ", program_counter)

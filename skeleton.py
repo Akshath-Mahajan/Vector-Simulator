@@ -121,7 +121,7 @@ class Core():
             operand2 = str(instruction[3])
             destination_reg_idx = int(destination[2:])
             operand1_reg_idx = int(operand1[2:])
-            if operand2.isdigit():
+            if operand2.isdigit() or operand2[0] == '-':
                 imm = int(operand2)
                 return destination_reg_idx, operand1_reg_idx, imm
             else:
@@ -503,17 +503,59 @@ class Core():
 
             # ----- CONTROL OPERATIONS
             elif instruction_word == "BEQ":
-                pass
+                # --- DECODE : BEQ ---
+                operand1_reg_idx, operand2_reg_idx, imm = self.get_operands(current_instruction)
+                # --- EXECUTE : BEQ ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                if scalar1 == scalar2:
+                    program_counter = program_counter + imm
+                # TODO - Test this instruction
             elif instruction_word == "BNE":
-                pass
+                # --- DECODE : BNE ---
+                operand1_reg_idx, operand2_reg_idx, imm = self.get_operands(current_instruction)
+                # --- EXECUTE : BNE ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                if scalar1 != scalar2:
+                    program_counter = program_counter + imm
+                # TODO - Test this instruction
             elif instruction_word == "BGT":
-                pass
+                # --- DECODE : BGT ---
+                operand1_reg_idx, operand2_reg_idx, imm = self.get_operands(current_instruction)
+                # --- EXECUTE : BGT ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                if scalar1 > scalar2:
+                    program_counter = program_counter + imm
+                # TODO - Test this instruction
             elif instruction_word == "BLT":
-                pass
+                # --- DECODE : BLT ---
+                operand1_reg_idx, operand2_reg_idx, imm = self.get_operands(current_instruction)
+                # --- EXECUTE : BLT ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                if scalar1 < scalar2:
+                    program_counter = program_counter + imm
+                # TODO - Test this instruction
             elif instruction_word == "BGE":
-                pass
+                # --- DECODE : BGE ---
+                operand1_reg_idx, operand2_reg_idx, imm = self.get_operands(current_instruction)
+                # --- EXECUTE : BGE ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                if scalar1 >= scalar2:
+                    program_counter = program_counter + imm
+                # TODO - Test this instruction
             elif instruction_word == "BLE":
-                pass
+                # --- DECODE : BLE ---
+                operand1_reg_idx, operand2_reg_idx, imm = self.get_operands(current_instruction)
+                # --- EXECUTE : BLE ---
+                scalar1 = self.RFs["SRF"].Read(operand1_reg_idx)[0]
+                scalar2 = self.RFs["SRF"].Read(operand2_reg_idx)[0]
+                if scalar1 <= scalar2:
+                    program_counter = program_counter + imm
+                # TODO - Test this instruction
             
             # ----- REGISTER-REGISTER SHUFFLE
             elif instruction_word == "UNPACKLO":

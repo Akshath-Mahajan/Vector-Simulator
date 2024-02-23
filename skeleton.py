@@ -159,10 +159,6 @@ class Core():
                 print("Stopping the program execution!")
                 break
             
-            ################################################################
-            # ADD MASKING LOGIC TO ALL VECTOR INSTRUCTIONS!!!
-            ################################################################
-
             # ----- VECTOR ARITHMETIC OPERATIONS
             elif instruction_word == "ADDVV":
                 # --- DECODE : ADDVV ---
@@ -173,11 +169,15 @@ class Core():
                 # print("Current vector 1 value : ", vector1)
                 # print("Current vector 2 value : ", vector2)
                 result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                vector_mask_string = "{:064b}".format(self.SRs["VM"].Read(0)[0])
+                vector_mask_list = list(vector_mask_string)
                 for i in range(self.SRs["VL"].Read(0)[0]):
-                    result[i] = vector1[i] + vector2[i]
+                    if int(vector_mask_list[i]) == 1:
+                        result[i] = vector1[i] + vector2[i]
                 # --- WRITEBACK : ADDVV ---
                 self.RFs["VRF"].Write(destination_reg_idx, result)
                 # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
+                # TODO - Test this instruction
             elif instruction_word == "ADDVS":
                 # --- DECODE : ADDVS ---
                 destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
@@ -188,11 +188,15 @@ class Core():
                 # print("Current vector 1 value : ", vector1)
                 # print("Current vector 2 value : ", vector2)
                 result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                vector_mask_string = "{:064b}".format(self.SRs["VM"].Read(0)[0])
+                vector_mask_list = list(vector_mask_string)
                 for i in range(self.SRs["VL"].Read(0)[0]):
-                    result[i] = vector1[i] + vector2[i]
+                    if int(vector_mask_list[i]) == 1:
+                        result[i] = vector1[i] + vector2[i]
                 # --- WRITEBACK : ADDVS ---
                 self.RFs["VRF"].Write(destination_reg_idx, result)
                 # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
+                # TODO - Test this instruction
             elif instruction_word == "SUBVV":
                 # --- DECODE : SUBVV ---
                 destination_reg_idx, operand1_reg_idx, operand2_reg_idx = self.get_operands(current_instruction)
@@ -202,8 +206,11 @@ class Core():
                 # print("Current vector 1 value : ", vector1)
                 # print("Current vector 2 value : ", vector2)
                 result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                vector_mask_string = "{:064b}".format(self.SRs["VM"].Read(0)[0])
+                vector_mask_list = list(vector_mask_string)
                 for i in range(self.SRs["VL"].Read(0)[0]):
-                    result[i] = vector1[i] - vector2[i]
+                    if int(vector_mask_list[i]) == 1:
+                        result[i] = vector1[i] - vector2[i]
                 # --- WRITEBACK : SUBVV ---
                 self.RFs["VRF"].Write(destination_reg_idx, result)
                 # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
@@ -218,8 +225,11 @@ class Core():
                 # print("Current vector 1 value : ", vector1)
                 # print("Current vector 2 value : ", vector2)
                 result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                vector_mask_string = "{:064b}".format(self.SRs["VM"].Read(0)[0])
+                vector_mask_list = list(vector_mask_string)
                 for i in range(self.SRs["VL"].Read(0)[0]):
-                    result[i] = vector1[i] - vector2[i]
+                    if int(vector_mask_list[i]) == 1:
+                        result[i] = vector1[i] - vector2[i]
                 # --- WRITEBACK : SUBVS ---
                 self.RFs["VRF"].Write(destination_reg_idx, result)
                 # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
@@ -233,8 +243,11 @@ class Core():
                 # print("Current vector 1 value : ", vector1)
                 # print("Current vector 2 value : ", vector2)
                 result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                vector_mask_string = "{:064b}".format(self.SRs["VM"].Read(0)[0])
+                vector_mask_list = list(vector_mask_string)
                 for i in range(self.SRs["VL"].Read(0)[0]):
-                    result[i] = vector1[i] * vector2[i]
+                    if int(vector_mask_list[i]) == 1:
+                        result[i] = vector1[i] * vector2[i]
                 # --- WRITEBACK : MULVV ---
                 self.RFs["VRF"].Write(destination_reg_idx, result)
                 # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
@@ -249,8 +262,11 @@ class Core():
                 # print("Current vector 1 value : ", vector1)
                 # print("Current vector 2 value : ", vector2)
                 result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                vector_mask_string = "{:064b}".format(self.SRs["VM"].Read(0)[0])
+                vector_mask_list = list(vector_mask_string)
                 for i in range(self.SRs["VL"].Read(0)[0]):
-                    result[i] = vector1[i] * vector2[i]
+                    if int(vector_mask_list[i]) == 1:
+                        result[i] = vector1[i] * vector2[i]
                 # --- WRITEBACK : MULVS ---
                 self.RFs["VRF"].Write(destination_reg_idx, result)
                 # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
@@ -264,9 +280,12 @@ class Core():
                 # print("Current vector 1 value : ", vector1)
                 # print("Current vector 2 value : ", vector2)
                 result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                vector_mask_string = "{:064b}".format(self.SRs["VM"].Read(0)[0])
+                vector_mask_list = list(vector_mask_string)
                 for i in range(self.SRs["VL"].Read(0)[0]):
                     # TODO - Check Divide by zero condition
-                    result[i] = vector1[i] // vector2[i]
+                    if int(vector_mask_list[i]) == 1:
+                        result[i] = vector1[i] // vector2[i]
                 # --- WRITEBACK : DIVVV ---
                 self.RFs["VRF"].Write(destination_reg_idx, result)
                 # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))
@@ -281,9 +300,12 @@ class Core():
                 # print("Current vector 1 value : ", vector1)
                 # print("Current vector 2 value : ", vector2)
                 result = [0x0 for e in range(self.RFs["VRF"].vec_length)]
+                vector_mask_string = "{:064b}".format(self.SRs["VM"].Read(0)[0])
+                vector_mask_list = list(vector_mask_string)
                 for i in range(self.SRs["VL"].Read(0)[0]):
                     # TODO - Check Divide by zero condition
-                    result[i] = vector1[i] // vector2[i]
+                    if int(vector_mask_list[i]) == 1:
+                        result[i] = vector1[i] // vector2[i]
                 # --- WRITEBACK : DIVVS ---
                 self.RFs["VRF"].Write(destination_reg_idx, result)
                 # print("Updated result value   : ", self.RFs["VRF"].Read(destination_reg_idx))

@@ -937,6 +937,8 @@ class Core():
                 scalar2 = scalar2[0]
                 if scalar1 == scalar2:
                     program_counter = program_counter + imm
+                    print("")
+                    continue
                 # TODO - Test this instruction
             elif instruction_word == "BNE":
                 # --- DECODE : BNE ---
@@ -952,6 +954,8 @@ class Core():
                 scalar2 = scalar2[0]
                 if scalar1 != scalar2:
                     program_counter = program_counter + imm
+                    print("")
+                    continue
                 # TODO - Test this instruction
             elif instruction_word == "BGT":
                 # --- DECODE : BGT ---
@@ -967,6 +971,8 @@ class Core():
                 scalar2 = scalar2[0]
                 if scalar1 > scalar2:
                     program_counter = program_counter + imm
+                    print("")
+                    continue
                 # TODO - Test this instruction
             elif instruction_word == "BLT":
                 # --- DECODE : BLT ---
@@ -982,6 +988,8 @@ class Core():
                 scalar2 = scalar2[0]
                 if scalar1 < scalar2:
                     program_counter = program_counter + imm
+                    print("")
+                    continue
                 # TODO - Test this instruction
             elif instruction_word == "BGE":
                 # --- DECODE : BGE ---
@@ -997,6 +1005,8 @@ class Core():
                 scalar2 = scalar2[0]
                 if scalar1 >= scalar2:
                     program_counter = program_counter + imm
+                    print("")
+                    continue
                 # TODO - Test this instruction
             elif instruction_word == "BLE":
                 # --- DECODE : BLE ---
@@ -1012,6 +1022,8 @@ class Core():
                 scalar2 = scalar2[0]
                 if scalar1 <= scalar2:
                     program_counter = program_counter + imm
+                    print("")
+                    continue
                 # TODO - Test this instruction
             
             # ----- REGISTER-REGISTER SHUFFLE

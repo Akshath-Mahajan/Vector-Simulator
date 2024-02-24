@@ -128,7 +128,7 @@ class Core():
                     "VRF": RegisterFile("VRF", 8, 64)}
         
         ### Special Purpose Registers
-        self.SRs = {"VM": RegisterFile("VM", 1, 1, 64),
+        self.SRs = {"VM": RegisterFile("VM", 1, 1, 66), # extra bits to avoid overflow error, explained further in document
                      "VL": RegisterFile("VL", 1)}
         
         # Initialising Vector Length Register as the MVL

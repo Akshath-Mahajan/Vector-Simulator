@@ -634,6 +634,7 @@ class Core():
                 # print("Current VL Value  : ", self.SRs["VL"].Read(0)[0])
                 # print("Current operand Value : ", self.RFs["SRF"].Read(operand_reg_idx)[0])
                 value = self.RFs["SRF"].Read(operand_reg_idx)
+                # print(value)
                 if value == None:
                     break
                 value = value[0]

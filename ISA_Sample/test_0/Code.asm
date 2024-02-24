@@ -1,2 +1,0 @@
-LV VR1 SR1
-HALT

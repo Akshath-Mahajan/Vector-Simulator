@@ -169,7 +169,14 @@ class Core():
             current_instruction = imem.Read(program_counter)
             if current_instruction == None:
                 break
-            current_instruction = current_instruction.split(" ")
+
+            if '#' in current_instruction:
+                current_instruction = current_instruction[:current_instruction.index('#')]
+                if current_instruction == "":
+                    continue
+            
+            current_instruction = current_instruction.strip().split(" ")
+
             print("Program Counter     : ", program_counter)
             print("Current Instruction : ", current_instruction)
             

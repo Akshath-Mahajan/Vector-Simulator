@@ -182,7 +182,7 @@ class Core():
             
             # --- DECODE + EXECUTE + WRITEBACK Stage ---
             instruction_word = current_instruction[0]
-            print("Instruction Word    : ", instruction_word)
+            # print("Instruction Word    : ", instruction_word)
 
             if instruction_word == "HALT":
                 # --- EXECUTE : HALT --- 

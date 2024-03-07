@@ -160,22 +160,43 @@ class Core():
         else:
             # -- ERROR --
             return None
+    
+    def read_code_file(self):
+        line_counter = 0
+        program = list()
+
+        while(line_counter < len(imem.instructions)):
+            current_line = imem.Read(line_counter)
+            
+            # Logic to handle inline comments and line comments
+            if '#' in current_line:
+                current_line = current_line[:current_line.index('#')]
+
+            # Logic to handle empty lines
+            # Note: Line comments result into empty lines after string slicing
+            if current_line == "":
+                line_counter = line_counter + 1
+                continue
+            
+            # If the current line is not empty, remove any trailing spaces, and split the instruction at a space.
+            current_line = current_line.strip().split(" ")
+
+            # Update the counter
+            line_counter = line_counter + 1
+
+            # Add the instruction in the program list
+            program.append(current_line)
+
+        return program
         
     def run(self):
         program_counter = 0
         
+        program = self.read_code_file()
+        
         while(True):
             # --- ISSUE Stage ---
-            current_instruction = imem.Read(program_counter)
-            if current_instruction == None:
-                break
-
-            if '#' in current_instruction:
-                current_instruction = current_instruction[:current_instruction.index('#')]
-                if current_instruction == "":
-                    continue
-            
-            current_instruction = current_instruction.strip().split(" ")
+            current_instruction = program[program_counter]
 
             print("Program Counter     : ", program_counter)
             print("Current Instruction : ", current_instruction)
